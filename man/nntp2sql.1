@@ -1,0 +1,115 @@
+.TH NNTP2SQL 1 "November 2025" "beta .3" "nntp2sql manual"
+.SH NAME
+nntp2sql \- NNTP to SQL ingestor (headers)
+.SH SYNOPSIS
+.B nntp2sql
+\fB--host\fR HOST [\fB--port\fR PORT] [\fB--ssl\fR] [\fB--starttls\fR]
+[\fB--user\fR USER \fB--pass\fR PASS]
+\fB--db-type\fR {sqlite|mariadb|mysql} \fB--db-name\fR NAME
+[\fB--db-host\fR HOST \fB--db-port\fR PORT \fB--db-user\fR USER \fB--db-pass\fR PASS]
+\fB--group\fR NAME [\fB--headers-only\fR] [\fB--limit\fR N]
+[\fB--progress-width\fR N] [\fB--init-db\fR | \fB--create-db\fR]
+[\fB--threads\fR N] [\fB--retries\fR N] [\fB--upsert\fR]
+[\fB--conf\fR FILE] [\fB--write-conf\fR FILE]
+[\fB--log\fR FILE] [\fB--verbose\fR]
+.SH DESCRIPTION
+\fBnntp2sql\fR connects to an NNTP server and ingests message header metadata
+into a SQL database. It supports fetching headers via XOVER or HEAD, optional
+TLS/STARTTLS and AUTHINFO, and both SQLite and MariaDB/MySQL backends.
+
+By default, the program updates existing rows only. With \fB--upsert\fR, it will
+insert rows when an update affects zero rows. Progress bars are shown during
+ingestion and can be configured via \fB--progress-width\fR.
+.SH OPTIONS
+.TP
+\fB--host\fR HOST
+NNTP server hostname (default: localhost).
+.TP
+\fB--port\fR PORT
+NNTP port (default: 119, or 563 with \fB--ssl\fR).
+.TP
+\fB--ssl\fR
+Connect using TLS immediately.
+.TP
+\fB--starttls\fR
+Negotiate STARTTLS after greeting.
+.TP
+\fB--user\fR USER \fB--pass\fR PASS
+Authenticate with AUTHINFO USER/PASS.
+.TP
+\fB--group\fR NAME
+Group to ingest.
+.TP
+\fB--headers-only\fR
+Fetch headers from XOVER instead of threaded HEAD.
+.TP
+\fB--limit\fR N
+Limit to the last N articles.
+.TP
+\fB--progress-width\fR N
+Set progress bar width (default: 40).
+.TP
+\fB--init-db\fR
+For MySQL, create the database if it doesn't exist.
+.TP
+\fB--create-db\fR
+Create database and schema, then exit.
+.TP
+\fB--db-type\fR {sqlite|mariadb|mysql}
+Select database backend.
+.TP
+\fB--db-name\fR NAME
+SQLite file path or MySQL database name.
+.TP
+\fB--db-host\fR HOST \fB--db-port\fR PORT \fB--db-user\fR USER \fB--db-pass\fR PASS
+MySQL connection parameters.
+.TP
+\fB--threads\fR N
+Number of HEAD worker threads (default: 1).
+.TP
+\fB--retries\fR N
+HEAD retry attempts (default: 3).
+.TP
+\fB--upsert\fR
+Perform update, then insert when no row is updated.
+.TP
+\fB--conf\fR FILE
+Load configuration file (key=value). CLI args override loaded values.
+.TP
+\fB--write-conf\fR FILE
+Write configuration to FILE and exit.
+.TP
+\fB--log\fR FILE
+Append logs to FILE.
+.TP
+\fB--verbose\fR
+Enable INFO-level logs.
+.SH SCHEMA
+Two tables are created:
+\fBgroups\fR: name UNIQUE, article_count, first, last.
+\fBarticles\fR: artnum, subject, author, date, message_id, refs, bytes, line_count, group_name.
+
+A unique index is enforced on (group_name, artnum) in \fBarticles\fR.
+.SH EXIT STATUS
+Returns 0 on success. Non-zero exit codes map to structured error codes such as
+ERR_ARGS (2), ERR_NET_CONNECT (11), ERR_TLS (12), ERR_NNTP_CMD (14),
+ERR_DB_CONNECT (20), ERR_DB_SCHEMA (21), ERR_DB_PREPARE (22).
+.SH EXAMPLES
+Update-only XOVER:
+.RS
+\fB nntp2sql --host news.example.net --group comp.lang.c --db-type sqlite --db-name headers.db --headers-only \fR
+.RE
+
+Upsert XOVER:
+.RS
+\fB nntp2sql --host news.example.net --group comp.lang.c --db-type sqlite --db-name headers.db --headers-only --upsert \fR
+.RE
+
+Create DB/schema:
+.RS
+\fB nntp2sql --db-type mariadb --db-name newsdb --init-db --create-db \fR
+.RE
+.SH VERSION
+beta .3
+.SH AUTHOR
+Your team.

@@ -1,0 +1,18 @@
+nntp2sql (beta .3)
+
+A compact NNTP → SQL ingestor with TLS/STARTTLS, AUTH, multithreaded headers fetch, SQLite/MySQL backends, update-only/upsert DB writes, progress bars, config persistence, and structured logging.
+
+Build:
+  cd Isotope
+  make nntp2sql        # SQLite default
+  make nntp2sql-mysql  # MySQL/MariaDB (set MYSQL_INC/MYSQL_LIB if needed)
+  make viewer          # GTK3 viewer (SQLite)
+
+Run:
+  ./nntp2sql --host news.example.net --group comp.lang.c --db-type sqlite --db-name headers.db --headers-only
+  ./nntp2sql --db-type mariadb --db-name newsdb --init-db --create-db
+  ./viewer --sqlite ../headers.db --group comp.lang.c
+
+Docs:
+  README.md
+  man/nntp2sql.1
