@@ -1,4 +1,4 @@
-# nntp2sql (beta .3)
+# nntp2sql (beta 0.42)
 
 nntp2sql is a compact NNTP → SQL ingestor supporting SSL/STARTTLS, optional AUTH, group selection, and storing headers either via XOVER or full HEAD requests. It supports SQLite and MariaDB/MySQL backends and includes multithreaded HEAD fetching, retries, progress bars, config save/load, and structured error logging.
 
@@ -145,4 +145,4 @@ See `man/nntp2sql.1` for a reference man page.
 Proprietary or as per your project needs.
 
 ## Version
-beta .3
+beta 0.42

@@ -1,5 +1,5 @@
 /*
- * db.c - Database abstraction (beta .3)
+ * db.c - Database abstraction (beta 0.42)
  */
 #include "db.h"
 #include "logging.h"

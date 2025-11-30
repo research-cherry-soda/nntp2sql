@@ -1,0 +1,97 @@
+" Manpage for nntp2sql
+.TH nntp2sql 1 "November 2025" "nntp2sql (beta 0.42)"
+.SH NAME
+nntp2sql \- NNTP to SQL ingestor and exporter
+.SH SYNOPSIS
+.B nntp2sql
+\fIoptions\fR
+.SH DESCRIPTION
+nntp2sql connects to an NNTP server and stores article metadata in SQL databases (SQLite, MySQL/MariaDB, or PostgreSQL). It supports SSL/STARTTLS, authentication, multithreaded HEAD fetching, update-first writes with optional upsert, configuration files, and HTML export. The companion GTK viewer displays and searches stored data.
+.PP
+Source layout: the primary CLI is \fBmain.c\fR; HTML export lives in \fBsrc/export_html.c\fR; a minimal PostgreSQL adapter is in \fBsrc/db_postgres.c\fR; the viewer is at \fBgui/viewer.c\fR. Build integration is managed via \fBconfigure.ac\fR and \fBMakefile.am\fR.
+.SH OPTIONS
+.TP
+\fB--host\fR HOST
+NNTP server host.
+.TP
+\fB--port\fR PORT
+NNTP server port (defaults 119 or 563 for SSL).
+.TP
+\fB--ssl\fR
+Use direct SSL connection.
+.TP
+\fB--starttls\fR
+Upgrade to TLS via STARTTLS.
+.TP
+\fB--user\fR, \fB--pass\fR
+NNTP authentication.
+.TP
+\fB--db-type\fR {sqlite|mariadb|mysql|postgres}
+Select backend.
+.TP
+\fB--db-name\fR NAME
+Database name (or SQLite file path).
+.TP
+\fB--db-host\fR, \fB--db-port\fR, \fB--db-user\fR, \fB--db-pass\fR
+MySQL/MariaDB connection options.
+.TP
+\fB--group\fR NAME
+Target news group.
+.TP
+\fB--headers-only\fR
+Use XOVER headers-only mode.
+.TP
+\fB--limit\fR N
+Limit number of articles.
+.TP
+\fB--progress-width\fR N
+Progress bar width.
+.TP
+\fB--threads\fR N, \fB--retries\fR N
+Worker threads and retry attempts for HEAD.
+.TP
+\fB--upsert\fR
+Insert if update affected zero rows.
+.TP
+\fB--init-db\fR, \fB--create-db\fR
+Initialize schema and optionally create DB.
+.TP
+\fB--conf\fR FILE, \fB--write-conf\fR FILE
+Load/save configuration.
+.TP
+\fB--export-html\fR
+Enable HTML export.
+.TP
+\fB--group-list\fR FILE
+Export multiple groups from list.
+.TP
+\fB--export-html-out\fR PATH
+Output file (single group) or directory (group list).
+.SH VIEWER
+The GTK viewer binary \fBviewer\fR supports SQLite, MySQL, and PostgreSQL:
+.nf
+viewer --db-type sqlite data.db
+viewer --db-type mysql host,db,user,pass[,port]
+viewer --db-type postgres "host=localhost dbname=mydb user=user password=pass"
+.fi
+A search entry filters by subject and author.
+.SH SOURCE CODE NOTES
+.TP
+\fBDatabase schema\fR
+Tables \fBgroups\fR and \fBarticles\fR are created if missing. A unique index on \fB(group_name, artnum)\fR enforces idempotent writes.
+.TP
+\fBWrite strategy\fR
+Writes use update-first semantics; when \fB--upsert\fR is set, an insert occurs if the update affects zero rows.
+.TP
+\fBExport\fR
+HTML export uses simple templates (minimal CSS) and can generate an index page for a list of groups. Optional pagination support is available in \fBsrc/export_html.c\fR.
+.TP
+\fBPostgreSQL\fR
+PostgreSQL connectivity uses \fBlibpq\fR, parameterized queries via \fBPQexecParams\fR, and mirrors the SQLite/MySQL behavior.
+.TP
+\fBBuild\fR
+Autotools detects OpenSSL, sqlite3, mysqlclient, optional libpq, and GTK. Man pages install via \fBmake install\fR when \fBman_MANS\fR is set in \fBMakefile.am\fR.
+.SH SEE ALSO
+news(5)
+.SH AUTHOR
+Cherry Soda Research and Software

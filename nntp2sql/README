@@ -1,0 +1,27 @@
+nntp2sql - NNTP to SQL ingestor
+
+Build:
+  autoreconf -fi
+  ./configure --with-postgres
+  make
+  sudo make install
+
+Usage:
+  ./nntp2sql --host HOST --db-type {sqlite|mariadb|mysql|postgres} --db-name NAME --group GROUP [options]
+
+Export HTML:
+  --export-html --group NAME --export-html-out file.html
+  --export-html --group-list file --export-html-out out/dir
+
+Viewer:
+  ./viewer --db-type sqlite data.db
+  ./viewer --db-type mysql host,db,user,pass[,port]
+  ./viewer --db-type postgres "host=... dbname=... user=... password=..."
+
+Options:
+  --ssl --starttls --user --pass --headers-only --limit --progress-width
+  --threads --retries --upsert --init-db --create-db --conf --write-conf --log --verbose
+
+Man page:
+  Installed as nntp2sql(1) via `make install`.
+  View with: `man nntp2sql`

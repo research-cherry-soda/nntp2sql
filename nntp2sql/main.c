@@ -42,10 +42,12 @@
 /* Optional DB client headers */
 #include <sqlite3.h>
 #include <mysql/mysql.h>  /* MariaDB/MySQL */
+#include <libpq-fe.h>     /* PostgreSQL */
 #include <pthread.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include "export_html.c" /* lightweight HTML export (uses DBRow helpers below) */
 
 #define BUFSZ 8192
 
@@ -264,12 +266,13 @@ static int conn_starttls(Conn *c) {
 
 /* DB abstraction */
 
-typedef enum { DB_SQLITE, DB_MYSQL } DBType;
+typedef enum { DB_SQLITE, DB_MYSQL, DB_POSTGRES } DBType;
 
 typedef struct {
     DBType type;
     sqlite3 *sqlite;
     MYSQL *mysql;
+    void *impl; /* Postgres state pointer */
     /* prepared statements */
     sqlite3_stmt *sqlite_insert_article;
     sqlite3_stmt *sqlite_insert_group;
@@ -279,6 +282,65 @@ typedef struct {
     sqlite3_stmt *sqlite_group_ins;
     MYSQL_STMT *mysql_article_ins;
 } DB;
+
+/* Row view used for exports/viewers */
+typedef struct {
+    long long artnum;
+    const char *subject;
+    const char *author;
+    const char *date;
+} DBRow;
+
+/* Iteration helpers for article queries by group */
+static sqlite3_stmt *sqlite_q_stmt = NULL;
+static int db_query_articles_begin(DB *db, const char *group_name){
+    if (db->type == DB_SQLITE){
+        const char *sql = "SELECT artnum, subject, author, date FROM articles WHERE group_name = ? ORDER BY artnum";
+        if (sqlite_q_stmt) { sqlite3_finalize(sqlite_q_stmt); sqlite_q_stmt = NULL; }
+        if (sqlite3_prepare_v2(db->sqlite, sql, -1, &sqlite_q_stmt, NULL) != SQLITE_OK) return 0;
+        if (sqlite3_bind_text(sqlite_q_stmt, 1, group_name, -1, SQLITE_TRANSIENT) != SQLITE_OK) return 0;
+        return 1;
+    } else if (db->type == DB_MYSQL){
+        /* Use simple query; caller will fetch using mysql_use_result */
+        char esc[512]; mysql_real_escape_string(db->mysql, esc, group_name, (unsigned long)strlen(group_name));
+        char q[1024]; snprintf(q, sizeof(q), "SELECT artnum, subject, author, date FROM articles WHERE group_name='%s' ORDER BY artnum", esc);
+        if (mysql_query(db->mysql, q)) { warnf("mysql query failed: %s", mysql_error(db->mysql)); return 0; }
+        return 1;
+    }
+    return 0;
+}
+
+static int db_query_articles_next(DB *db, DBRow *out){
+    if (db->type == DB_SQLITE){
+        int rc = sqlite3_step(sqlite_q_stmt);
+        if (rc != SQLITE_ROW) return 0;
+        out->artnum = sqlite3_column_int64(sqlite_q_stmt, 0);
+        out->subject = (const char*)sqlite3_column_text(sqlite_q_stmt, 1);
+        out->author  = (const char*)sqlite3_column_text(sqlite_q_stmt, 2);
+        out->date    = (const char*)sqlite3_column_text(sqlite_q_stmt, 3);
+        return 1;
+    } else if (db->type == DB_MYSQL){
+        static MYSQL_RES *res = NULL; static MYSQL_ROW row;
+        static int initialized = 0;
+        if (!initialized){ res = mysql_store_result(db->mysql); initialized = 1; }
+        if (!res) return 0;
+        row = mysql_fetch_row(res);
+        if (!row) return 0;
+        out->artnum = row[0] ? atoll(row[0]) : 0;
+        out->subject = row[1]; out->author = row[2]; out->date = row[3];
+        return 1;
+    }
+    return 0;
+}
+
+static void db_query_articles_end(DB *db){
+    if (db->type == DB_SQLITE){
+        if (sqlite_q_stmt) { sqlite3_finalize(sqlite_q_stmt); sqlite_q_stmt = NULL; }
+    } else if (db->type == DB_MYSQL){
+        MYSQL_RES *res = mysql_store_result(db->mysql); /* ensure drained */
+        if (res) mysql_free_result(res);
+    }
+}
 
 static void db_close(DB *db) {
     if (!db) return;
@@ -411,6 +473,13 @@ static void db_init_schema(DB *db) {
             mysql_stmt_close(db->mysql_article_ins); db->mysql_article_ins = NULL;
         }
         /* MySQL group upsert uses quoted table/columns */
+    } else if (db->type == DB_POSTGRES) {
+        PGconn *pgc = (PGconn*)db->impl;
+        if (!pgc) return;
+        PGresult *r;
+        r = PQexec(pgc, "CREATE TABLE IF NOT EXISTS groups (id SERIAL PRIMARY KEY, name TEXT UNIQUE, article_count INT, first INT, last INT);"); PQclear(r);
+        r = PQexec(pgc, "CREATE TABLE IF NOT EXISTS articles (id SERIAL PRIMARY KEY, artnum INT, subject TEXT, author TEXT, date TEXT, message_id TEXT, refs TEXT, bytes INT, line_count INT, group_name TEXT);"); PQclear(r);
+        r = PQexec(pgc, "CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_group_artnum ON articles(group_name, artnum);"); PQclear(r);
     }
 }
 
@@ -470,6 +539,20 @@ static void db_insert_group(DB *db, const char *name, int count, int first, int 
             } else {
                 warnf("group not found for update: %s", name);
             }
+        }
+        return;
+    }
+    if (db->type == DB_POSTGRES) {
+        PGconn *pgc = (PGconn*)db->impl; if (!pgc) return;
+        const char *pupd[4]; char cbuf[16], fbuf[16], lbuf[16];
+        snprintf(cbuf,sizeof(cbuf),"%d",count); snprintf(fbuf,sizeof(fbuf),"%d",first); snprintf(lbuf,sizeof(lbuf),"%d",last);
+        pupd[0]=cbuf; pupd[1]=fbuf; pupd[2]=lbuf; pupd[3]=name;
+        PGresult *r = PQexecParams(pgc, "UPDATE groups SET article_count=$1, first=$2, last=$3 WHERE name=$4", 4, NULL, pupd, NULL, NULL, 0);
+        int ok = (PQresultStatus(r)==PGRES_COMMAND_OK); PQclear(r);
+        if (!ok && g_upsert){
+            const char *pins[4]; pins[0]=name; pins[1]=cbuf; pins[2]=fbuf; pins[3]=lbuf;
+            r = PQexecParams(pgc, "INSERT INTO groups (name, article_count, first, last) VALUES ($1,$2,$3,$4)", 4, NULL, pins, NULL, NULL, 0);
+            PQclear(r);
         }
         return;
     }
@@ -574,6 +657,24 @@ static void db_insert_article(DB *db, const char *group, int artnum, const char 
             } else {
                 warnf("article not found for update: %s #%d", group, artnum);
             }
+        }
+        return;
+    }
+    if (db->type == DB_POSTGRES) {
+        PGconn *pgc = (PGconn*)db->impl; if (!pgc) return;
+        char bbuf[16], lbuf[16], abuf[16];
+        snprintf(bbuf,sizeof(bbuf),"%d",bytes); snprintf(lbuf,sizeof(lbuf),"%d",lines); snprintf(abuf,sizeof(abuf),"%d",artnum);
+        const char *upd[9] = { subject, author, date, message_id, references, bbuf, lbuf, group, abuf };
+        PGresult *r = PQexecParams(pgc,
+            "UPDATE articles SET subject=$1, author=$2, date=$3, message_id=$4, refs=$5, bytes=$6, line_count=$7 WHERE group_name=$8 AND artnum=$9",
+            9, NULL, upd, NULL, NULL, 0);
+        int ok = (PQresultStatus(r)==PGRES_COMMAND_OK); PQclear(r);
+        if (!ok && g_upsert){
+            const char *ins[9] = { abuf, subject, author, date, message_id, references, bbuf, lbuf, group };
+            r = PQexecParams(pgc,
+                "INSERT INTO articles (artnum, subject, author, date, message_id, refs, bytes, line_count, group_name) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+                9, NULL, ins, NULL, NULL, 0);
+            PQclear(r);
         }
         return;
     }
@@ -941,6 +1042,8 @@ int main(int argc, char **argv) {
     int threads = 1; /* multithread workers for HEAD */
     int retries = 3; /* HEAD retry attempts */
     const char *log_path = NULL; /* optional log file */
+    /* HTML export options */
+    int opt_export_html = 0; const char *opt_export_group = NULL; const char *opt_export_group_list = NULL; const char *opt_export_out = NULL;
     int i = 1;
     while (i < argc) {
         if (strcmp(argv[i], "--host") == 0) { host = argv[++i]; }
@@ -968,6 +1071,10 @@ int main(int argc, char **argv) {
         else if (strcmp(argv[i], "--threads") == 0) { threads = atoi(argv[++i]); if (threads < 1) threads = 1; if (threads > 64) threads = 64; }
         else if (strcmp(argv[i], "--retries") == 0) { retries = atoi(argv[++i]); if (retries < 0) retries = 0; if (retries > 10) retries = 10; }
         else if (strcmp(argv[i], "--upsert") == 0) { g_upsert = 1; }
+        else if (strcmp(argv[i], "--export-html") == 0) { opt_export_html = 1; }
+        else if (strcmp(argv[i], "--export-html-out") == 0) { opt_export_out = argv[++i]; }
+        else if (strcmp(argv[i], "--group-list") == 0) { opt_export_group_list = argv[++i]; }
+        else if (strcmp(argv[i], "--group") == 0) { group = argv[++i]; opt_export_group = group; }
         else usage_and_exit(argv[0], ERR_ARGS, "unknown option");
         i++;
     }
@@ -984,14 +1091,15 @@ int main(int argc, char **argv) {
     }
     /* apply defaults if not provided */
     if (!host) host = "localhost"; /* default NNTP host */
-    if (!host || !db_type_s || !db_name || !group) usage_and_exit(argv[0], ERR_ARGS, "missing required parameters");
+    if (!host || !db_type_s || !db_name || (!group && !opt_export_group_list)) usage_and_exit(argv[0], ERR_ARGS, "missing required parameters");
     if (!port) port = use_ssl ? "563" : "119";
     infof("Config: host=%s port=%s ssl=%d starttls=%d db=%s type=%s group=%s", host, port, use_ssl, do_starttls, db_name, db_type_s, group);
 
     DB db = {0};
     if (strcmp(db_type_s, "sqlite") == 0) db.type = DB_SQLITE;
     else if (strcmp(db_type_s, "mariadb") == 0 || strcmp(db_type_s, "mysql") == 0) db.type = DB_MYSQL;
-    else fatal(ERR_ARGS, "Unknown db-type (expected sqlite|mariadb|mysql): %s", db_type_s);
+    else if (strcmp(db_type_s, "postgres") == 0 || strcmp(db_type_s, "pgsql") == 0) db.type = DB_POSTGRES;
+    else fatal(ERR_ARGS, "Unknown db-type (expected sqlite|mariadb|mysql|postgres): %s", db_type_s);
 
     /* Open DB (optionally create database) */
     if (db.type == DB_SQLITE) {
@@ -1017,6 +1125,18 @@ int main(int argc, char **argv) {
         if (!mysql_real_connect(db.mysql, mh, mu, mpass, db_name, mp, NULL, 0)) {
             fatal(ERR_DB_CONNECT, "mysql connect failed: %s", mysql_error(db.mysql));
         }
+    } else if (db.type == DB_POSTGRES) {
+        /* Connect via libpq */
+        char conninfo[512];
+        snprintf(conninfo, sizeof(conninfo), "host=%s port=%s dbname=%s user=%s password=%s",
+                 db_host?db_host:"localhost",
+                 db_port?db_port:"5432",
+                 db_name?db_name:"postgres",
+                 db_user?db_user:"postgres",
+                 db_pass?db_pass:"");
+        PGconn *pgc = PQconnectdb(conninfo);
+        if (PQstatus(pgc) != CONNECTION_OK) fatal(ERR_DB_CONNECT, "postgres connect failed: %s", PQerrorMessage(pgc));
+        db.impl = pgc;
     }
 
     if (write_conf_path) {
@@ -1036,6 +1156,22 @@ int main(int argc, char **argv) {
         db_close(&db);
         log_close();
         return 0; /* exit without NNTP ingest */
+    }
+
+    /* If export-only requested, skip NNTP connection */
+    if (opt_export_html && opt_export_out) {
+        db_init_schema(&db);
+        if (opt_export_group) {
+            int rcx = export_group_to_html(&db, opt_export_group, opt_export_out);
+            if (rcx != 0) fatal(ERR_RUNTIME, "HTML export failed (%d)", rcx);
+            db_close(&db); log_close(); return 0;
+        } else if (opt_export_group_list) {
+            int rcx = export_groups_from_file(&db, opt_export_group_list, opt_export_out);
+            if (rcx != 0) fatal(ERR_RUNTIME, "HTML export list failed (%d)", rcx);
+            db_close(&db); log_close(); return 0;
+        } else {
+            usage_and_exit(argv[0], ERR_ARGS, "--export-html requires --group or --group-list and --export-html-out");
+        }
     }
 
     /* NNTP connection */

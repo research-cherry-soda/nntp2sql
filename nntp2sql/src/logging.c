@@ -1,5 +1,5 @@
 /*
- * logging.c - Structured logging and error handling (beta .3)
+ * logging.c - Structured logging and error handling (beta 0.42)
  */
 #include "logging.h"
 #include <stdarg.h>

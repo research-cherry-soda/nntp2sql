@@ -14,8 +14,6 @@
 
 @SET_MAKE@
 
-# Makefile.am for nntp2sql (beta .3)
-
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -90,13 +88,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = nntp2sql$(EXEEXT) $(am__EXEEXT_1)
-
-# Pthreads added if available
-@WITH_PTHREAD_TRUE@am__append_1 = -lpthread
-
-# Viewer (GTK3) optional
-@WITH_GTK3_TRUE@am__append_2 = viewer
+bin_PROGRAMS = nntp2sql$(EXEEXT) viewer$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -110,18 +102,20 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@WITH_GTK3_TRUE@am__EXEEXT_1 = viewer$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am_nntp2sql_OBJECTS = main.$(OBJEXT) src/logging.$(OBJEXT) \
-	src/nntp.$(OBJEXT) src/db.$(OBJEXT)
+am_nntp2sql_OBJECTS = nntp2sql-main.$(OBJEXT) \
+	src/nntp2sql-export_html.$(OBJEXT)
 nntp2sql_OBJECTS = $(am_nntp2sql_OBJECTS)
-nntp2sql_LDADD = $(LDADD)
-am__viewer_SOURCES_DIST = gui/viewer.c
-@WITH_GTK3_TRUE@am_viewer_OBJECTS = gui/viewer-viewer.$(OBJEXT)
+nntp2sql_DEPENDENCIES =
+nntp2sql_LINK = $(CCLD) $(nntp2sql_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_viewer_OBJECTS = gui/viewer-viewer.$(OBJEXT)
 viewer_OBJECTS = $(am_viewer_OBJECTS)
 viewer_DEPENDENCIES =
+viewer_LINK = $(CCLD) $(viewer_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -137,9 +131,9 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/main.Po \
-	gui/$(DEPDIR)/viewer-viewer.Po src/$(DEPDIR)/db.Po \
-	src/$(DEPDIR)/logging.Po src/$(DEPDIR)/nntp.Po
+am__depfiles_remade = ./$(DEPDIR)/nntp2sql-main.Po \
+	gui/$(DEPDIR)/viewer-viewer.Po \
+	src/$(DEPDIR)/nntp2sql-export_html.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -158,7 +152,15 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(nntp2sql_SOURCES) $(viewer_SOURCES)
-DIST_SOURCES = $(nntp2sql_SOURCES) $(am__viewer_SOURCES_DIST)
+DIST_SOURCES = $(nntp2sql_SOURCES) $(viewer_SOURCES)
+RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
+	ctags-recursive dvi-recursive html-recursive info-recursive \
+	install-data-recursive install-dvi-recursive \
+	install-exec-recursive install-html-recursive \
+	install-info-recursive install-pdf-recursive \
+	install-ps-recursive install-recursive installcheck-recursive \
+	installdirs-recursive pdf-recursive ps-recursive \
+	tags-recursive uninstall-recursive
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -192,7 +194,15 @@ am__uninstall_files_from_dir = { \
   }
 man1dir = $(mandir)/man1
 NROFF = nroff
-MANS = $(dist_man_MANS)
+MANS = $(dist_man_MANS) $(man_MANS)
+RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
+  distclean-recursive maintainer-clean-recursive
+am__recursive_targets = \
+  $(RECURSIVE_TARGETS) \
+  $(RECURSIVE_CLEAN_TARGETS) \
+  $(am__extra_recursive_targets)
+AM_RECURSIVE_TARGETS = $(am__recursive_targets:-recursive=) TAGS CTAGS \
+	cscope distdir distdir-am dist dist-all distcheck
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP) \
 	config.h.in
 # Read a list of newline-separated strings from the standard input,
@@ -211,9 +221,10 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-AM_RECURSIVE_TARGETS = cscope
+DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in compile depcomp install-sh missing
+	$(srcdir)/config.h.in README compile depcomp install-sh \
+	missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -224,6 +235,31 @@ am__remove_distdir = \
       || { sleep 5 && rm -rf "$(distdir)"; }; \
   else :; fi
 am__post_remove_distdir = $(am__remove_distdir)
+am__relativize = \
+  dir0=`pwd`; \
+  sed_first='s,^\([^/]*\)/.*$$,\1,'; \
+  sed_rest='s,^[^/]*/*,,'; \
+  sed_last='s,^.*/\([^/]*\)$$,\1,'; \
+  sed_butlast='s,/*[^/]*$$,,'; \
+  while test -n "$$dir1"; do \
+    first=`echo "$$dir1" | sed -e "$$sed_first"`; \
+    if test "$$first" != "."; then \
+      if test "$$first" = ".."; then \
+        dir2=`echo "$$dir0" | sed -e "$$sed_last"`/"$$dir2"; \
+        dir0=`echo "$$dir0" | sed -e "$$sed_butlast"`; \
+      else \
+        first2=`echo "$$dir2" | sed -e "$$sed_first"`; \
+        if test "$$first2" = "$$first"; then \
+          dir2=`echo "$$dir2" | sed -e "$$sed_rest"`; \
+        else \
+          dir2="../$$dir2"; \
+        fi; \
+        dir0="$$dir0"/"$$first"; \
+      fi; \
+    fi; \
+    dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
+  done; \
+  reldir="$$dir2"
 DIST_ARCHIVES = $(distdir).tar.gz
 GZIP_ENV = -9
 DIST_TARGETS = dist-gzip
@@ -256,8 +292,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-GTK3_CFLAGS = @GTK3_CFLAGS@
-GTK3_LIBS = @GTK3_LIBS@
+GTK_CFLAGS = @GTK_CFLAGS@
+GTK_LIBS = @GTK_LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -268,9 +304,9 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
-MARIADB_CFLAGS = @MARIADB_CFLAGS@
-MARIADB_LIBS = @MARIADB_LIBS@
 MKDIR_P = @MKDIR_P@
+MYSQL_CFLAGS = @MYSQL_CFLAGS@
+MYSQL_LIBS = @MYSQL_LIBS@
 OBJEXT = @OBJEXT@
 OPENSSL_CFLAGS = @OPENSSL_CFLAGS@
 OPENSSL_LIBS = @OPENSSL_LIBS@
@@ -285,6 +321,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PQ_LIBS = @PQ_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 SQLITE3_CFLAGS = @SQLITE3_CFLAGS@
@@ -336,27 +373,18 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-nntp2sql_SOURCES = main.c \
-	src/logging.c src/logging.h \
-	src/nntp.c src/nntp.h \
-	src/db.c src/db.h
-
-
-# Compiler/linker flags from configure
-AM_CFLAGS = @OPENSSL_CFLAGS@ @SQLITE3_CFLAGS@ @MARIADB_CFLAGS@
-AM_LDFLAGS = @OPENSSL_LIBS@ @SQLITE3_LIBS@ @MARIADB_LIBS@ \
-	$(am__append_1)
-@WITH_GTK3_TRUE@viewer_SOURCES = gui/viewer.c
-@WITH_GTK3_TRUE@viewer_CPPFLAGS = @GTK3_CFLAGS@
-@WITH_GTK3_TRUE@viewer_LDADD = @GTK3_LIBS@ -lsqlite3
-
-# Man page installation
+SUBDIRS = .
+nntp2sql_SOURCES = main.c src/export_html.c
+nntp2sql_LDADD = @OPENSSL_LIBS@ @SQLITE3_LIBS@ @MYSQL_LIBS@ @PQ_LIBS@
+nntp2sql_CFLAGS = @OPENSSL_CFLAGS@ @SQLITE3_CFLAGS@ @MYSQL_CFLAGS@
+viewer_SOURCES = gui/viewer.c
+viewer_LDADD = @SQLITE3_LIBS@ @GTK_LIBS@ @MYSQL_LIBS@ @PQ_LIBS@
+viewer_CFLAGS = @SQLITE3_CFLAGS@ @GTK_CFLAGS@ @MYSQL_CFLAGS@
+man_MANS = man/nntp2sql.1
 dist_man_MANS = man/nntp2sql.1
-
-# Extra distribution files
-EXTRA_DIST = README README.md configure.ac src/logging.h src/nntp.h src/db.h gui/viewer.c
+EXTRA_DIST = README README.md configure.ac man/nntp2sql.1 src/export_html.c gui/viewer.c
 all: config.h
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -456,14 +484,12 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: >>src/$(DEPDIR)/$(am__dirstamp)
-src/logging.$(OBJEXT): src/$(am__dirstamp) \
+src/nntp2sql-export_html.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/nntp.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/db.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 
 nntp2sql$(EXEEXT): $(nntp2sql_OBJECTS) $(nntp2sql_DEPENDENCIES) $(EXTRA_nntp2sql_DEPENDENCIES) 
 	@rm -f nntp2sql$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(nntp2sql_OBJECTS) $(nntp2sql_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(nntp2sql_LINK) $(nntp2sql_OBJECTS) $(nntp2sql_LDADD) $(LIBS)
 gui/$(am__dirstamp):
 	@$(MKDIR_P) gui
 	@: >>gui/$(am__dirstamp)
@@ -475,7 +501,7 @@ gui/viewer-viewer.$(OBJEXT): gui/$(am__dirstamp) \
 
 viewer$(EXEEXT): $(viewer_OBJECTS) $(viewer_DEPENDENCIES) $(EXTRA_viewer_DEPENDENCIES) 
 	@rm -f viewer$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(viewer_OBJECTS) $(viewer_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(viewer_LINK) $(viewer_OBJECTS) $(viewer_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -485,11 +511,9 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nntp2sql-main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@gui/$(DEPDIR)/viewer-viewer.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/db.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/logging.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nntp.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nntp2sql-export_html.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -513,23 +537,51 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
+nntp2sql-main.o: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT nntp2sql-main.o -MD -MP -MF $(DEPDIR)/nntp2sql-main.Tpo -c -o nntp2sql-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/nntp2sql-main.Tpo $(DEPDIR)/nntp2sql-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='nntp2sql-main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o nntp2sql-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+
+nntp2sql-main.obj: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT nntp2sql-main.obj -MD -MP -MF $(DEPDIR)/nntp2sql-main.Tpo -c -o nntp2sql-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/nntp2sql-main.Tpo $(DEPDIR)/nntp2sql-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='nntp2sql-main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o nntp2sql-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+
+src/nntp2sql-export_html.o: src/export_html.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT src/nntp2sql-export_html.o -MD -MP -MF src/$(DEPDIR)/nntp2sql-export_html.Tpo -c -o src/nntp2sql-export_html.o `test -f 'src/export_html.c' || echo '$(srcdir)/'`src/export_html.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/nntp2sql-export_html.Tpo src/$(DEPDIR)/nntp2sql-export_html.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/export_html.c' object='src/nntp2sql-export_html.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o src/nntp2sql-export_html.o `test -f 'src/export_html.c' || echo '$(srcdir)/'`src/export_html.c
+
+src/nntp2sql-export_html.obj: src/export_html.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT src/nntp2sql-export_html.obj -MD -MP -MF src/$(DEPDIR)/nntp2sql-export_html.Tpo -c -o src/nntp2sql-export_html.obj `if test -f 'src/export_html.c'; then $(CYGPATH_W) 'src/export_html.c'; else $(CYGPATH_W) '$(srcdir)/src/export_html.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/nntp2sql-export_html.Tpo src/$(DEPDIR)/nntp2sql-export_html.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/export_html.c' object='src/nntp2sql-export_html.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o src/nntp2sql-export_html.obj `if test -f 'src/export_html.c'; then $(CYGPATH_W) 'src/export_html.c'; else $(CYGPATH_W) '$(srcdir)/src/export_html.c'; fi`
+
 gui/viewer-viewer.o: gui/viewer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
 
 gui/viewer-viewer.obj: gui/viewer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
-install-man1: $(dist_man_MANS)
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
+install-man1: $(dist_man_MANS) $(man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \
-	list2='$(dist_man_MANS)'; \
+	list2='$(dist_man_MANS) $(man_MANS)'; \
 	test -n "$(man1dir)" \
 	  && test -n "`echo $$list1$$list2`" \
 	  || exit 0; \
@@ -564,20 +616,67 @@ uninstall-man1:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man1dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(dist_man_MANS) $(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.1[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man1dir)'; $(am__uninstall_files_from_dir)
 
+# This directory's subdirectories are mostly independent; you can cd
+# into them and run 'make' without going through this Makefile.
+# To change the values of 'make' variables: instead of editing Makefiles,
+# (1) if the variable is set in 'config.status', edit 'config.status'
+#     (which will cause the Makefiles to be regenerated when you run 'make');
+# (2) otherwise, pass the desired values on the 'make' command line.
+$(am__recursive_targets):
+	@fail=; \
+	if $(am__make_keepgoing); then \
+	  failcom='fail=yes'; \
+	else \
+	  failcom='exit 1'; \
+	fi; \
+	dot_seen=no; \
+	target=`echo $@ | sed s/-recursive//`; \
+	case "$@" in \
+	  distclean-* | maintainer-clean-*) list='$(DIST_SUBDIRS)' ;; \
+	  *) list='$(SUBDIRS)' ;; \
+	esac; \
+	for subdir in $$list; do \
+	  echo "Making $$target in $$subdir"; \
+	  if test "$$subdir" = "."; then \
+	    dot_seen=yes; \
+	    local_target="$$target-am"; \
+	  else \
+	    local_target="$$target"; \
+	  fi; \
+	  ($(am__cd) $$subdir && $(MAKE) $(AM_MAKEFLAGS) $$local_target) \
+	  || eval $$failcom; \
+	done; \
+	if test "$$dot_seen" = "no"; then \
+	  $(MAKE) $(AM_MAKEFLAGS) "$$target-am" || exit 1; \
+	fi; test -z "$$fail"
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
-tags: tags-am
+tags: tags-recursive
 TAGS: tags
 
 tags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
 	set x; \
 	here=`pwd`; \
+	if ($(ETAGS) --etags-include --version) >/dev/null 2>&1; then \
+	  include_option=--etags-include; \
+	  empty_fix=.; \
+	else \
+	  include_option=--include; \
+	  empty_fix=; \
+	fi; \
+	list='$(SUBDIRS)'; for subdir in $$list; do \
+	  if test "$$subdir" = .; then :; else \
+	    test ! -f $$subdir/TAGS || \
+	      set "$$@" "$$include_option=$$here/$$subdir/TAGS"; \
+	  fi; \
+	done; \
 	$(am__define_uniq_tagged_files); \
 	shift; \
 	if test -z "$(ETAGS_ARGS)$$*$$unique"; then :; else \
@@ -590,7 +689,7 @@ tags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
 	      $$unique; \
 	  fi; \
 	fi
-ctags: ctags-am
+ctags: ctags-recursive
 
 CTAGS: ctags
 ctags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
@@ -609,7 +708,7 @@ cscope: cscope.files
 clean-cscope:
 	-rm -f cscope.files
 cscope.files: clean-cscope cscopelist
-cscopelist: cscopelist-am
+cscopelist: cscopelist-recursive
 
 cscopelist-am: $(am__tagged_files)
 	list='$(am__tagged_files)'; \
@@ -662,6 +761,31 @@ distdir-am: $(DISTFILES)
 	    test -f "$(distdir)/$$file" \
 	    || cp -p $$d/$$file "$(distdir)/$$file" \
 	    || exit 1; \
+	  fi; \
+	done
+	@list='$(DIST_SUBDIRS)'; for subdir in $$list; do \
+	  if test "$$subdir" = .; then :; else \
+	    $(am__make_dryrun) \
+	      || test -d "$(distdir)/$$subdir" \
+	      || $(MKDIR_P) "$(distdir)/$$subdir" \
+	      || exit 1; \
+	    dir1=$$subdir; dir2="$(distdir)/$$subdir"; \
+	    $(am__relativize); \
+	    new_distdir=$$reldir; \
+	    dir1=$$subdir; dir2="$(top_distdir)"; \
+	    $(am__relativize); \
+	    new_top_distdir=$$reldir; \
+	    echo " (cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) top_distdir="$$new_top_distdir" distdir="$$new_distdir" \\"; \
+	    echo "     am__remove_distdir=: am__skip_length_check=: am__skip_mode_fix=: distdir)"; \
+	    ($(am__cd) $$subdir && \
+	      $(MAKE) $(AM_MAKEFLAGS) \
+	        top_distdir="$$new_top_distdir" \
+	        distdir="$$new_distdir" \
+		am__remove_distdir=: \
+		am__skip_length_check=: \
+		am__skip_mode_fix=: \
+	        distdir) \
+	      || exit 1; \
 	  fi; \
 	done
 	-test -n "$(am__skip_mode_fix)" \
@@ -808,21 +932,22 @@ distcleancheck: distclean
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
 check-am: all-am
-check: check-am
+check: check-recursive
 all-am: Makefile $(PROGRAMS) $(MANS) config.h
-installdirs:
+installdirs: installdirs-recursive
+installdirs-am:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
-install-exec: install-exec-am
-install-data: install-data-am
-uninstall: uninstall-am
+install: install-recursive
+install-exec: install-exec-recursive
+install-data: install-data-recursive
+uninstall: uninstall-recursive
 
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 
-installcheck: installcheck-am
+installcheck: installcheck-recursive
 install-strip:
 	if test -z '$(STRIP)'; then \
 	  $(MAKE) $(AM_MAKEFLAGS) INSTALL_PROGRAM="$(INSTALL_STRIP_PROGRAM)" \
@@ -848,81 +973,77 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-clean: clean-am
+clean: clean-recursive
 
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
-distclean: distclean-am
+distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -f ./$(DEPDIR)/main.Po
+	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
 	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
-	-rm -f src/$(DEPDIR)/db.Po
-	-rm -f src/$(DEPDIR)/logging.Po
-	-rm -f src/$(DEPDIR)/nntp.Po
+	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
 
-dvi: dvi-am
+dvi: dvi-recursive
 
 dvi-am:
 
-html: html-am
+html: html-recursive
 
 html-am:
 
-info: info-am
+info: info-recursive
 
 info-am:
 
 install-data-am: install-man
 
-install-dvi: install-dvi-am
+install-dvi: install-dvi-recursive
 
 install-dvi-am:
 
 install-exec-am: install-binPROGRAMS
 
-install-html: install-html-am
+install-html: install-html-recursive
 
 install-html-am:
 
-install-info: install-info-am
+install-info: install-info-recursive
 
 install-info-am:
 
 install-man: install-man1
 
-install-pdf: install-pdf-am
+install-pdf: install-pdf-recursive
 
 install-pdf-am:
 
-install-ps: install-ps-am
+install-ps: install-ps-recursive
 
 install-ps-am:
 
 installcheck-am:
 
-maintainer-clean: maintainer-clean-am
+maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -f ./$(DEPDIR)/main.Po
+	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
 	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
-	-rm -f src/$(DEPDIR)/db.Po
-	-rm -f src/$(DEPDIR)/logging.Po
-	-rm -f src/$(DEPDIR)/nntp.Po
+	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
-mostlyclean: mostlyclean-am
+mostlyclean: mostlyclean-recursive
 
 mostlyclean-am: mostlyclean-compile mostlyclean-generic
 
-pdf: pdf-am
+pdf: pdf-recursive
 
 pdf-am:
 
-ps: ps-am
+ps: ps-recursive
 
 ps-am:
 
@@ -930,11 +1051,12 @@ uninstall-am: uninstall-binPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: all install-am install-strip
+.MAKE: $(am__recursive_targets) all install-am install-strip
 
-.PHONY: CTAGS GTAGS TAGS all all-am am--depfiles am--refresh check \
-	check-am clean clean-binPROGRAMS clean-cscope clean-generic \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
+.PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
+	am--depfiles am--refresh check check-am clean \
+	clean-binPROGRAMS clean-cscope clean-generic cscope \
+	cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
 	dist-bzip3 dist-gzip dist-lzip dist-shar dist-tarZ dist-xz \
 	dist-zip dist-zstd distcheck distclean distclean-compile \
 	distclean-generic distclean-hdr distclean-tags distcleancheck \
@@ -944,11 +1066,11 @@ uninstall-man: uninstall-man1
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-man install-man1 install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-man \
-	uninstall-man1
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-man uninstall-man1
 
 .PRECIOUS: Makefile
 
