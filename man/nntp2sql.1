@@ -1,11 +1,11 @@
-.TH NNTP2SQL 1 "November 2025" "beta 0.42" "nntp2sql manual"
+.TH NNTP2SQL 1 "November 2025" "beta 0.50" "nntp2sql manual"
 .SH NAME
 nntp2sql \- NNTP to SQL ingestor (headers)
 .SH SYNOPSIS
 .B nntp2sql
 \fB--host\fR HOST [\fB--port\fR PORT] [\fB--ssl\fR] [\fB--starttls\fR]
 [\fB--user\fR USER \fB--pass\fR PASS]
-\fB--db-type\fR {sqlite|mariadb|mysql} \fB--db-name\fR NAME
+\fB--db-type\fR {sqlite|mariadb|mysql|postgres} \fB--db-name\fR NAME
 [\fB--db-host\fR HOST \fB--db-port\fR PORT \fB--db-user\fR USER \fB--db-pass\fR PASS]
 \fB--group\fR NAME [\fB--headers-only\fR] [\fB--limit\fR N]
 [\fB--progress-width\fR N] [\fB--init-db\fR | \fB--create-db\fR]
@@ -62,7 +62,7 @@ Select database backend.
 SQLite file path or MySQL database name.
 .TP
 \fB--db-host\fR HOST \fB--db-port\fR PORT \fB--db-user\fR USER \fB--db-pass\fR PASS
-MySQL connection parameters.
+MySQL/MariaDB connection parameters.
 .TP
 \fB--threads\fR N
 Number of HEAD worker threads (default: 1).
@@ -110,6 +110,6 @@ Create DB/schema:
 \fB nntp2sql --db-type mariadb --db-name newsdb --init-db --create-db \fR
 .RE
 .SH VERSION
-beta 0.42
+beta 0.50
 .SH AUTHOR
 Your team.

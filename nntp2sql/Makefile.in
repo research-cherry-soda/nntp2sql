@@ -88,7 +88,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = nntp2sql$(EXEEXT) viewer$(EXEEXT)
+bin_PROGRAMS = nntp2sql$(EXEEXT) $(am__EXEEXT_1)
+@BUILD_VIEWER_TRUE@am__append_1 = isotope-viewer
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -102,19 +103,20 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+@BUILD_VIEWER_TRUE@am__EXEEXT_1 = isotope-viewer$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
+am_isotope_viewer_OBJECTS = gui/isotope_viewer-viewer.$(OBJEXT)
+isotope_viewer_OBJECTS = $(am_isotope_viewer_OBJECTS)
+isotope_viewer_DEPENDENCIES =
+isotope_viewer_LINK = $(CCLD) $(isotope_viewer_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_nntp2sql_OBJECTS = nntp2sql-main.$(OBJEXT) \
 	src/nntp2sql-export_html.$(OBJEXT)
 nntp2sql_OBJECTS = $(am_nntp2sql_OBJECTS)
 nntp2sql_DEPENDENCIES =
 nntp2sql_LINK = $(CCLD) $(nntp2sql_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
-am_viewer_OBJECTS = gui/viewer-viewer.$(OBJEXT)
-viewer_OBJECTS = $(am_viewer_OBJECTS)
-viewer_DEPENDENCIES =
-viewer_LINK = $(CCLD) $(viewer_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -132,7 +134,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/nntp2sql-main.Po \
-	gui/$(DEPDIR)/viewer-viewer.Po \
+	gui/$(DEPDIR)/isotope_viewer-viewer.Po \
 	src/$(DEPDIR)/nntp2sql-export_html.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -151,8 +153,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(nntp2sql_SOURCES) $(viewer_SOURCES)
-DIST_SOURCES = $(nntp2sql_SOURCES) $(viewer_SOURCES)
+SOURCES = $(isotope_viewer_SOURCES) $(nntp2sql_SOURCES)
+DIST_SOURCES = $(isotope_viewer_SOURCES) $(nntp2sql_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -377,12 +379,15 @@ SUBDIRS = .
 nntp2sql_SOURCES = main.c src/export_html.c
 nntp2sql_LDADD = @OPENSSL_LIBS@ @SQLITE3_LIBS@ @MYSQL_LIBS@ @PQ_LIBS@
 nntp2sql_CFLAGS = @OPENSSL_CFLAGS@ @SQLITE3_CFLAGS@ @MYSQL_CFLAGS@
-viewer_SOURCES = gui/viewer.c
-viewer_LDADD = @SQLITE3_LIBS@ @GTK_LIBS@ @MYSQL_LIBS@ @PQ_LIBS@
-viewer_CFLAGS = @SQLITE3_CFLAGS@ @GTK_CFLAGS@ @MYSQL_CFLAGS@
+
+# Ensure headers in src/ are found
+AM_CPPFLAGS = -Isrc
+isotope_viewer_SOURCES = gui/viewer.c
+isotope_viewer_LDADD = @SQLITE3_LIBS@ @GTK_LIBS@ @MYSQL_LIBS@ @PQ_LIBS@
+isotope_viewer_CFLAGS = @SQLITE3_CFLAGS@ @GTK_CFLAGS@ @MYSQL_CFLAGS@
 man_MANS = man/nntp2sql.1
 dist_man_MANS = man/nntp2sql.1
-EXTRA_DIST = README README.md configure.ac man/nntp2sql.1 src/export_html.c gui/viewer.c
+EXTRA_DIST = README README.md configure.ac man/nntp2sql.1 src/export_html.c src/db.h gui/viewer.c
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -478,6 +483,18 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-$(am__rm_f) $(bin_PROGRAMS)
+gui/$(am__dirstamp):
+	@$(MKDIR_P) gui
+	@: >>gui/$(am__dirstamp)
+gui/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) gui/$(DEPDIR)
+	@: >>gui/$(DEPDIR)/$(am__dirstamp)
+gui/isotope_viewer-viewer.$(OBJEXT): gui/$(am__dirstamp) \
+	gui/$(DEPDIR)/$(am__dirstamp)
+
+isotope-viewer$(EXEEXT): $(isotope_viewer_OBJECTS) $(isotope_viewer_DEPENDENCIES) $(EXTRA_isotope_viewer_DEPENDENCIES) 
+	@rm -f isotope-viewer$(EXEEXT)
+	$(AM_V_CCLD)$(isotope_viewer_LINK) $(isotope_viewer_OBJECTS) $(isotope_viewer_LDADD) $(LIBS)
 src/$(am__dirstamp):
 	@$(MKDIR_P) src
 	@: >>src/$(am__dirstamp)
@@ -490,18 +507,6 @@ src/nntp2sql-export_html.$(OBJEXT): src/$(am__dirstamp) \
 nntp2sql$(EXEEXT): $(nntp2sql_OBJECTS) $(nntp2sql_DEPENDENCIES) $(EXTRA_nntp2sql_DEPENDENCIES) 
 	@rm -f nntp2sql$(EXEEXT)
 	$(AM_V_CCLD)$(nntp2sql_LINK) $(nntp2sql_OBJECTS) $(nntp2sql_LDADD) $(LIBS)
-gui/$(am__dirstamp):
-	@$(MKDIR_P) gui
-	@: >>gui/$(am__dirstamp)
-gui/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) gui/$(DEPDIR)
-	@: >>gui/$(DEPDIR)/$(am__dirstamp)
-gui/viewer-viewer.$(OBJEXT): gui/$(am__dirstamp) \
-	gui/$(DEPDIR)/$(am__dirstamp)
-
-viewer$(EXEEXT): $(viewer_OBJECTS) $(viewer_DEPENDENCIES) $(EXTRA_viewer_DEPENDENCIES) 
-	@rm -f viewer$(EXEEXT)
-	$(AM_V_CCLD)$(viewer_LINK) $(viewer_OBJECTS) $(viewer_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -512,7 +517,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nntp2sql-main.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@gui/$(DEPDIR)/viewer-viewer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@gui/$(DEPDIR)/isotope_viewer-viewer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nntp2sql-export_html.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -536,6 +541,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+gui/isotope_viewer-viewer.o: gui/viewer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -MT gui/isotope_viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/isotope_viewer-viewer.Tpo -c -o gui/isotope_viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/isotope_viewer-viewer.Tpo gui/$(DEPDIR)/isotope_viewer-viewer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/isotope_viewer-viewer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -c -o gui/isotope_viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+
+gui/isotope_viewer-viewer.obj: gui/viewer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -MT gui/isotope_viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/isotope_viewer-viewer.Tpo -c -o gui/isotope_viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/isotope_viewer-viewer.Tpo gui/$(DEPDIR)/isotope_viewer-viewer.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/isotope_viewer-viewer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -c -o gui/isotope_viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
 
 nntp2sql-main.o: main.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT nntp2sql-main.o -MD -MP -MF $(DEPDIR)/nntp2sql-main.Tpo -c -o nntp2sql-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
@@ -564,20 +583,6 @@ src/nntp2sql-export_html.obj: src/export_html.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/export_html.c' object='src/nntp2sql-export_html.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o src/nntp2sql-export_html.obj `if test -f 'src/export_html.c'; then $(CYGPATH_W) 'src/export_html.c'; else $(CYGPATH_W) '$(srcdir)/src/export_html.c'; fi`
-
-gui/viewer-viewer.o: gui/viewer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
-
-gui/viewer-viewer.obj: gui/viewer.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(viewer_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
 install-man1: $(dist_man_MANS) $(man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \
@@ -980,7 +985,7 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
-	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
+	-rm -f gui/$(DEPDIR)/isotope_viewer-viewer.Po
 	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -1030,7 +1035,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
 	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
-	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
+	-rm -f gui/$(DEPDIR)/isotope_viewer-viewer.Po
 	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

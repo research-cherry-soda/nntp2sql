@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if libpq (PostgreSQL) is available */
+#undef HAVE_PQ
+
 /* Name of package */
 #undef PACKAGE
 

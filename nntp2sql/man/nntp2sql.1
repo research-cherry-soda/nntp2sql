@@ -1,5 +1,5 @@
 " Manpage for nntp2sql
-.TH nntp2sql 1 "November 2025" "nntp2sql (beta 0.42)"
+.TH nntp2sql 1 "November 2025" "nntp2sql (beta 0.50)"
 .SH NAME
 nntp2sql \- NNTP to SQL ingestor and exporter
 .SH SYNOPSIS
@@ -7,6 +7,12 @@ nntp2sql \- NNTP to SQL ingestor and exporter
 \fIoptions\fR
 .SH DESCRIPTION
 nntp2sql connects to an NNTP server and stores article metadata in SQL databases (SQLite, MySQL/MariaDB, or PostgreSQL). It supports SSL/STARTTLS, authentication, multithreaded HEAD fetching, update-first writes with optional upsert, configuration files, and HTML export. The companion GTK viewer displays and searches stored data.
+
+.SH COMPANION VIEWER
+The project includes a GTK companion viewer installed as \fBisotope-viewer\fR. It can connect to SQLite, MySQL/MariaDB, or PostgreSQL backends and supports searching by subject and author. Invoke it as \fBisotope-viewer\fR on BSD, Linux, and macOS.
+
+.SH PORTABILITY
+nntp2sql and \fBisotope-viewer\fR aim to support Unix-like systems including BSD, Linux, and macOS. Autotools is used for configuration and make-based builds to maximize portability across these platforms.
 .PP
 Source layout: the primary CLI is \fBmain.c\fR; HTML export lives in \fBsrc/export_html.c\fR; a minimal PostgreSQL adapter is in \fBsrc/db_postgres.c\fR; the viewer is at \fBgui/viewer.c\fR. Build integration is managed via \fBconfigure.ac\fR and \fBMakefile.am\fR.
 .SH OPTIONS

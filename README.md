@@ -3,24 +3,16 @@
 nntp2sql is a compact NNTP → SQL ingestor supporting SSL/STARTTLS, optional AUTH, group selection, and storing headers either via XOVER or full HEAD requests. It supports SQLite and MariaDB/MySQL backends and includes multithreaded HEAD fetching, retries, progress bars, config save/load, and structured error logging.
 
 ## Features
-- SSL/TLS via `--ssl` or STARTTLS via `--starttls`
-- Authentication via `AUTHINFO USER/PASS`
-- Headers-only via `XOVER` or full headers via `HEAD`
-- Databases: SQLite and MariaDB/MySQL
-- Schema initialization via `--init-db` and `--create-db`
-- Progress bars with configurable width (`--progress-width`)
-- Config load/save (`--conf`, `--write-conf`)
-- Multithreaded HEAD workers (`--threads`), with retries (`--retries`)
-- Update-only DB writes; optional upsert (`--upsert`)
-- Structured errors with codes and optional logging (`--log`, `--verbose`)
 
-## Build
+Companion GTK viewer (installed as `isotope-viewer`) supports SQLite/MySQL/PostgreSQL with search.
 On macOS, install dependencies:
 
 ```zsh
-# SQLite and OpenSSL are typically present; install MySQL/MariaDB client headers
+### Viewer (`isotope-viewer`)
+The GTK viewer displays and searches stored data. It is installed as `isotope-viewer` and runs on BSD, Linux, and macOS.
 brew install mariadb-connector-c
-# Or, alternatively:
+## Platform Support
+BSD, Linux, and macOS (Unix-like systems)
 brew install mysql-client
 # If using mysql-client, you may need:
 echo 'export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"' >> ~/.zshrc

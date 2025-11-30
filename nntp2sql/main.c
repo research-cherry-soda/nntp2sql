@@ -42,12 +42,14 @@
 /* Optional DB client headers */
 #include <sqlite3.h>
 #include <mysql/mysql.h>  /* MariaDB/MySQL */
+#ifdef HAVE_PQ
 #include <libpq-fe.h>     /* PostgreSQL */
+#endif
 #include <pthread.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include "export_html.c" /* lightweight HTML export (uses DBRow helpers below) */
+#include "src/export_html.h" /* HTML export declarations */
 
 #define BUFSZ 8192
 
@@ -264,36 +266,11 @@ static int conn_starttls(Conn *c) {
     return 1;
 }
 
-/* DB abstraction */
-
-typedef enum { DB_SQLITE, DB_MYSQL, DB_POSTGRES } DBType;
-
-typedef struct {
-    DBType type;
-    sqlite3 *sqlite;
-    MYSQL *mysql;
-    void *impl; /* Postgres state pointer */
-    /* prepared statements */
-    sqlite3_stmt *sqlite_insert_article;
-    sqlite3_stmt *sqlite_insert_group;
-    MYSQL_STMT *mysql_insert_article;
-    /* additional prepared statements for upsert */
-    sqlite3_stmt *sqlite_article_ins;
-    sqlite3_stmt *sqlite_group_ins;
-    MYSQL_STMT *mysql_article_ins;
-} DB;
-
-/* Row view used for exports/viewers */
-typedef struct {
-    long long artnum;
-    const char *subject;
-    const char *author;
-    const char *date;
-} DBRow;
+/* DB abstraction: using declarations from src/db.h via export_html */
 
 /* Iteration helpers for article queries by group */
 static sqlite3_stmt *sqlite_q_stmt = NULL;
-static int db_query_articles_begin(DB *db, const char *group_name){
+int db_query_articles_begin(DB *db, const char *group_name){
     if (db->type == DB_SQLITE){
         const char *sql = "SELECT artnum, subject, author, date FROM articles WHERE group_name = ? ORDER BY artnum";
         if (sqlite_q_stmt) { sqlite3_finalize(sqlite_q_stmt); sqlite_q_stmt = NULL; }
@@ -310,7 +287,7 @@ static int db_query_articles_begin(DB *db, const char *group_name){
     return 0;
 }
 
-static int db_query_articles_next(DB *db, DBRow *out){
+int db_query_articles_next(DB *db, DBRow *out){
     if (db->type == DB_SQLITE){
         int rc = sqlite3_step(sqlite_q_stmt);
         if (rc != SQLITE_ROW) return 0;
@@ -333,7 +310,7 @@ static int db_query_articles_next(DB *db, DBRow *out){
     return 0;
 }
 
-static void db_query_articles_end(DB *db){
+void db_query_articles_end(DB *db){
     if (db->type == DB_SQLITE){
         if (sqlite_q_stmt) { sqlite3_finalize(sqlite_q_stmt); sqlite_q_stmt = NULL; }
     } else if (db->type == DB_MYSQL){
@@ -342,7 +319,7 @@ static void db_query_articles_end(DB *db){
     }
 }
 
-static void db_close(DB *db) {
+void db_close(DB *db) {
     if (!db) return;
     if (db->type == DB_SQLITE) {
         if (db->sqlite_insert_article) sqlite3_finalize(db->sqlite_insert_article);
@@ -374,7 +351,7 @@ static void db_exec(DB *db, const char *sql) {
 }
 
 /* Basic escaping for SQL insertion; for production use prepared statements. */
-static char *db_escape(DB *db, const char *s) {
+char *db_escape(DB *db, const char *s) {
     if (!s) return strdup("");
     if (db->type == DB_SQLITE) {
         /* simple safe allocator: replace single quote with two single quotes */
@@ -404,7 +381,7 @@ static char *db_escape(DB *db, const char *s) {
 }
 
 /* Create tables */
-static void db_init_schema(DB *db) {
+void db_init_schema(DB *db) {
     /* Note: MySQL reserves GROUPS, REFERENCES, LINES. Avoid reserved words: use article_count, refs, line_count. Quote MySQL identifiers. */
     if (db->type == DB_SQLITE) {
         db_exec(db,
@@ -473,7 +450,9 @@ static void db_init_schema(DB *db) {
             mysql_stmt_close(db->mysql_article_ins); db->mysql_article_ins = NULL;
         }
         /* MySQL group upsert uses quoted table/columns */
-    } else if (db->type == DB_POSTGRES) {
+    }
+#ifdef HAVE_PQ
+    else if (db->type == DB_POSTGRES) {
         PGconn *pgc = (PGconn*)db->impl;
         if (!pgc) return;
         PGresult *r;
@@ -481,10 +460,11 @@ static void db_init_schema(DB *db) {
         r = PQexec(pgc, "CREATE TABLE IF NOT EXISTS articles (id SERIAL PRIMARY KEY, artnum INT, subject TEXT, author TEXT, date TEXT, message_id TEXT, refs TEXT, bytes INT, line_count INT, group_name TEXT);"); PQclear(r);
         r = PQexec(pgc, "CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_group_artnum ON articles(group_name, artnum);"); PQclear(r);
     }
+#endif
 }
 
 /* Insert group info */
-static void db_insert_group(DB *db, const char *name, int count, int first, int last) {
+void db_insert_group(DB *db, const char *name, int count, int first, int last) {
     if (db->type == DB_SQLITE && db->sqlite_insert_group) {
         if (sqlite3_bind_int(db->sqlite_insert_group, 1, count) != SQLITE_OK ||
             sqlite3_bind_int(db->sqlite_insert_group, 2, first) != SQLITE_OK ||
@@ -542,6 +522,7 @@ static void db_insert_group(DB *db, const char *name, int count, int first, int 
         }
         return;
     }
+    #ifdef HAVE_PQ
     if (db->type == DB_POSTGRES) {
         PGconn *pgc = (PGconn*)db->impl; if (!pgc) return;
         const char *pupd[4]; char cbuf[16], fbuf[16], lbuf[16];
@@ -556,10 +537,11 @@ static void db_insert_group(DB *db, const char *name, int count, int first, int 
         }
         return;
     }
+    #endif
 }
 
 /* Insert article header data */
-static void db_insert_article(DB *db, const char *group, int artnum, const char *subject,
+void db_insert_article(DB *db, const char *group, int artnum, const char *subject,
                               const char *author, const char *date, const char *message_id,
                               const char *references, int bytes, int lines) {
     if (db->type == DB_SQLITE && db->sqlite_insert_article) {
@@ -660,6 +642,7 @@ static void db_insert_article(DB *db, const char *group, int artnum, const char 
         }
         return;
     }
+    #ifdef HAVE_PQ
     if (db->type == DB_POSTGRES) {
         PGconn *pgc = (PGconn*)db->impl; if (!pgc) return;
         char bbuf[16], lbuf[16], abuf[16];
@@ -678,6 +661,7 @@ static void db_insert_article(DB *db, const char *group, int artnum, const char 
         }
         return;
     }
+    #endif
     /* fallback to legacy escaping if prepared failed */
     char *g = db_escape(db, group);
     char *s = db_escape(db, subject);
@@ -1125,7 +1109,9 @@ int main(int argc, char **argv) {
         if (!mysql_real_connect(db.mysql, mh, mu, mpass, db_name, mp, NULL, 0)) {
             fatal(ERR_DB_CONNECT, "mysql connect failed: %s", mysql_error(db.mysql));
         }
-    } else if (db.type == DB_POSTGRES) {
+    }
+#ifdef HAVE_PQ
+    else if (db.type == DB_POSTGRES) {
         /* Connect via libpq */
         char conninfo[512];
         snprintf(conninfo, sizeof(conninfo), "host=%s port=%s dbname=%s user=%s password=%s",
@@ -1138,6 +1124,7 @@ int main(int argc, char **argv) {
         if (PQstatus(pgc) != CONNECTION_OK) fatal(ERR_DB_CONNECT, "postgres connect failed: %s", PQerrorMessage(pgc));
         db.impl = pgc;
     }
+#endif
 
     if (write_conf_path) {
         write_conf(write_conf_path, host, port, use_ssl, do_starttls,

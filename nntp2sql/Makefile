@@ -14,8 +14,6 @@
 
 
 
-# Makefile.am for nntp2sql (beta .3)
-
 
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -91,12 +89,7 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 bin_PROGRAMS = nntp2sql$(EXEEXT) $(am__EXEEXT_1)
-
-# Pthreads added if available
-am__append_1 = -lpthread
-
-# Viewer (GTK3) optional
-#am__append_2 = viewer
+am__append_1 = isotope-viewer
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -110,18 +103,21 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-#am__EXEEXT_1 = viewer$(EXEEXT)
+am__EXEEXT_1 = isotope-viewer$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am_nntp2sql_OBJECTS = main.$(OBJEXT) src/logging.$(OBJEXT) \
-	src/nntp.$(OBJEXT) src/db.$(OBJEXT)
+am_isotope_viewer_OBJECTS = gui/isotope_viewer-viewer.$(OBJEXT)
+isotope_viewer_OBJECTS = $(am_isotope_viewer_OBJECTS)
+isotope_viewer_DEPENDENCIES =
+isotope_viewer_LINK = $(CCLD) $(isotope_viewer_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_nntp2sql_OBJECTS = nntp2sql-main.$(OBJEXT) \
+	src/nntp2sql-export_html.$(OBJEXT)
 nntp2sql_OBJECTS = $(am_nntp2sql_OBJECTS)
-nntp2sql_LDADD = $(LDADD)
-am__viewer_SOURCES_DIST = gui/viewer.c
-#am_viewer_OBJECTS = gui/viewer-viewer.$(OBJEXT)
-viewer_OBJECTS = $(am_viewer_OBJECTS)
-viewer_DEPENDENCIES =
+nntp2sql_DEPENDENCIES =
+nntp2sql_LINK = $(CCLD) $(nntp2sql_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_$(V))
 am__v_P_ = $(am__v_P_$(AM_DEFAULT_VERBOSITY))
 am__v_P_0 = false
@@ -137,9 +133,9 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/main.Po \
-	gui/$(DEPDIR)/viewer-viewer.Po src/$(DEPDIR)/db.Po \
-	src/$(DEPDIR)/logging.Po src/$(DEPDIR)/nntp.Po
+am__depfiles_remade = ./$(DEPDIR)/nntp2sql-main.Po \
+	gui/$(DEPDIR)/isotope_viewer-viewer.Po \
+	src/$(DEPDIR)/nntp2sql-export_html.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
@@ -157,8 +153,16 @@ AM_V_CCLD = $(am__v_CCLD_$(V))
 am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(nntp2sql_SOURCES) $(viewer_SOURCES)
-DIST_SOURCES = $(nntp2sql_SOURCES) $(am__viewer_SOURCES_DIST)
+SOURCES = $(isotope_viewer_SOURCES) $(nntp2sql_SOURCES)
+DIST_SOURCES = $(isotope_viewer_SOURCES) $(nntp2sql_SOURCES)
+RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
+	ctags-recursive dvi-recursive html-recursive info-recursive \
+	install-data-recursive install-dvi-recursive \
+	install-exec-recursive install-html-recursive \
+	install-info-recursive install-pdf-recursive \
+	install-ps-recursive install-recursive installcheck-recursive \
+	installdirs-recursive pdf-recursive ps-recursive \
+	tags-recursive uninstall-recursive
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -192,7 +196,15 @@ am__uninstall_files_from_dir = { \
   }
 man1dir = $(mandir)/man1
 NROFF = nroff
-MANS = $(dist_man_MANS)
+MANS = $(dist_man_MANS) $(man_MANS)
+RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
+  distclean-recursive maintainer-clean-recursive
+am__recursive_targets = \
+  $(RECURSIVE_TARGETS) \
+  $(RECURSIVE_CLEAN_TARGETS) \
+  $(am__extra_recursive_targets)
+AM_RECURSIVE_TARGETS = $(am__recursive_targets:-recursive=) TAGS CTAGS \
+	cscope distdir distdir-am dist dist-all distcheck
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP) \
 	config.h.in
 # Read a list of newline-separated strings from the standard input,
@@ -211,9 +223,10 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-AM_RECURSIVE_TARGETS = cscope
+DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in compile depcomp install-sh missing
+	$(srcdir)/config.h.in README compile depcomp install-sh \
+	missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -224,6 +237,31 @@ am__remove_distdir = \
       || { sleep 5 && rm -rf "$(distdir)"; }; \
   else :; fi
 am__post_remove_distdir = $(am__remove_distdir)
+am__relativize = \
+  dir0=`pwd`; \
+  sed_first='s,^\([^/]*\)/.*$$,\1,'; \
+  sed_rest='s,^[^/]*/*,,'; \
+  sed_last='s,^.*/\([^/]*\)$$,\1,'; \
+  sed_butlast='s,/*[^/]*$$,,'; \
+  while test -n "$$dir1"; do \
+    first=`echo "$$dir1" | sed -e "$$sed_first"`; \
+    if test "$$first" != "."; then \
+      if test "$$first" = ".."; then \
+        dir2=`echo "$$dir0" | sed -e "$$sed_last"`/"$$dir2"; \
+        dir0=`echo "$$dir0" | sed -e "$$sed_butlast"`; \
+      else \
+        first2=`echo "$$dir2" | sed -e "$$sed_first"`; \
+        if test "$$first2" = "$$first"; then \
+          dir2=`echo "$$dir2" | sed -e "$$sed_rest"`; \
+        else \
+          dir2="../$$dir2"; \
+        fi; \
+        dir0="$$dir0"/"$$first"; \
+      fi; \
+    fi; \
+    dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
+  done; \
+  reldir="$$dir2"
 DIST_ARCHIVES = $(distdir).tar.gz
 GZIP_ENV = -9
 DIST_TARGETS = dist-gzip
@@ -235,17 +273,17 @@ am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
 distcleancheck_listfiles = \
   find . \( -type f -a \! \
             \( -name .nfs* -o -name .smb* -o -name .__afs* \) \) -print
-ACLOCAL = ${SHELL} '/Users/jon/Development/NOV2625/Isotope/missing' aclocal-1.18
+ACLOCAL = ${SHELL} '/Users/jon/Development/NOV2625/nntp2sql/missing' aclocal-1.18
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
-AUTOCONF = ${SHELL} '/Users/jon/Development/NOV2625/Isotope/missing' autoconf
-AUTOHEADER = ${SHELL} '/Users/jon/Development/NOV2625/Isotope/missing' autoheader
-AUTOMAKE = ${SHELL} '/Users/jon/Development/NOV2625/Isotope/missing' automake-1.18
+AUTOCONF = ${SHELL} '/Users/jon/Development/NOV2625/nntp2sql/missing' autoconf
+AUTOHEADER = ${SHELL} '/Users/jon/Development/NOV2625/nntp2sql/missing' autoheader
+AUTOMAKE = ${SHELL} '/Users/jon/Development/NOV2625/nntp2sql/missing' automake-1.18
 AWK = awk
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
-CPPFLAGS = -I/opt/homebrew/opt/mysql-client/include
+CPPFLAGS = -I/opt/homebrew/include -I/opt/homebrew/include 
 CSCOPE = cscope
 CTAGS = ctags
 CYGPATH_W = echo
@@ -256,45 +294,46 @@ ECHO_N =
 ECHO_T = 
 ETAGS = etags
 EXEEXT = 
-GTK3_CFLAGS = 
-GTK3_LIBS = 
+GTK_CFLAGS = -I/opt/homebrew/Cellar/gtk4/4.20.3/include/gtk-4.0 -I/opt/homebrew/Cellar/pango/1.57.0_1/include/pango-1.0 -I/opt/homebrew/Cellar/fribidi/1.0.16/include/fribidi -I/opt/homebrew/Cellar/harfbuzz/12.2.0_1/include/harfbuzz -I/opt/homebrew/Cellar/graphite2/1.3.14/include -I/opt/homebrew/include/gdk-pixbuf-2.0 -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/zstd/include -I/opt/homebrew/Cellar/xz/5.8.1/include -I/opt/homebrew/opt/jpeg-turbo/include -I/opt/homebrew/Cellar/cairo/1.18.4/include/cairo -I/opt/homebrew/Cellar/fontconfig/2.17.1/include -I/opt/homebrew/opt/freetype/include/freetype2 -I/opt/homebrew/opt/libpng/include/libpng16 -I/opt/homebrew/Cellar/libxext/1.3.6/include -I/opt/homebrew/Cellar/xorgproto/2024.1/include -I/opt/homebrew/Cellar/libxrender/0.9.12/include -I/opt/homebrew/Cellar/libx11/1.8.12/include -I/opt/homebrew/Cellar/libxcb/1.17.0/include -I/opt/homebrew/Cellar/libxau/1.0.12/include -I/opt/homebrew/Cellar/libxdmcp/1.1.5/include -I/opt/homebrew/Cellar/pixman/0.46.4/include/pixman-1 -I/opt/homebrew/Cellar/graphene/1.10.8/include/graphene-1.0 -I/opt/homebrew/Cellar/graphene/1.10.8/lib/graphene-1.0/include -I/opt/homebrew/Cellar/glib/2.86.2/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/ffi -I/opt/homebrew/Cellar/glib/2.86.2/include/glib-2.0 -I/opt/homebrew/Cellar/glib/2.86.2/lib/glib-2.0/include -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/Cellar/pcre2/10.47/include
+GTK_LIBS = -L/opt/homebrew/Cellar/gtk4/4.20.3/lib -lgtk-4 -L/opt/homebrew/Cellar/pango/1.57.0_1/lib -lpangocairo-1.0 -lpango-1.0 -L/opt/homebrew/Cellar/harfbuzz/12.2.0_1/lib -lharfbuzz -L/opt/homebrew/lib -lgdk_pixbuf-2.0 -L/opt/homebrew/Cellar/cairo/1.18.4/lib -lcairo-gobject -lcairo -L/opt/homebrew/Cellar/graphene/1.10.8/lib -lgraphene-1.0 -L/opt/homebrew/Cellar/glib/2.86.2/lib -lgio-2.0 -lgobject-2.0 -lglib-2.0 -L/opt/homebrew/opt/gettext/lib -lintl
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
-LDFLAGS = -L/opt/homebrew/opt/mysql-client/lib
+LDFLAGS = -L/opt/homebrew/lib -L/opt/homebrew/lib 
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} '/Users/jon/Development/NOV2625/Isotope/missing' makeinfo
-MARIADB_CFLAGS = 
-MARIADB_LIBS = 
+MAKEINFO = ${SHELL} '/Users/jon/Development/NOV2625/nntp2sql/missing' makeinfo
 MKDIR_P = mkdir -p
+MYSQL_CFLAGS = -I/opt/homebrew/Cellar/mysql/9.5.0_2/include/mysql
+MYSQL_LIBS = -L/opt/homebrew/Cellar/mysql/9.5.0_2/lib -lmysqlclient
 OBJEXT = o
 OPENSSL_CFLAGS = -I/opt/homebrew/Cellar/openssl@3/3.6.0/include
 OPENSSL_LIBS = -L/opt/homebrew/Cellar/openssl@3/3.6.0/lib -lssl -lcrypto
 PACKAGE = nntp2sql
-PACKAGE_BUGREPORT = you@example.com
+PACKAGE_BUGREPORT = support@example.com
 PACKAGE_NAME = nntp2sql
-PACKAGE_STRING = nntp2sql 0.3
+PACKAGE_STRING = nntp2sql 0.50-beta
 PACKAGE_TARNAME = nntp2sql
 PACKAGE_URL = 
-PACKAGE_VERSION = 0.3
+PACKAGE_VERSION = 0.50-beta
 PATH_SEPARATOR = :
 PKG_CONFIG = /opt/homebrew/bin/pkg-config
 PKG_CONFIG_LIBDIR = 
-PKG_CONFIG_PATH = /opt/homebrew/opt/mysql-client/lib/pkgconfig
+PKG_CONFIG_PATH = /opt/homebrew/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:
+PQ_LIBS = 
 SET_MAKE = 
 SHELL = /bin/sh
 SQLITE3_CFLAGS = 
 SQLITE3_LIBS = -lsqlite3
 STRIP = 
-VERSION = 0.3
-abs_builddir = /Users/jon/Development/NOV2625/Isotope
-abs_srcdir = /Users/jon/Development/NOV2625/Isotope
-abs_top_builddir = /Users/jon/Development/NOV2625/Isotope
-abs_top_srcdir = /Users/jon/Development/NOV2625/Isotope
+VERSION = 0.50-beta
+abs_builddir = /Users/jon/Development/NOV2625/nntp2sql
+abs_srcdir = /Users/jon/Development/NOV2625/nntp2sql
+abs_top_builddir = /Users/jon/Development/NOV2625/nntp2sql
+abs_top_srcdir = /Users/jon/Development/NOV2625/nntp2sql
 ac_ct_CC = gcc
 am__include = include
 am__leading_dot = .
@@ -315,7 +354,7 @@ host_alias =
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /Users/jon/Development/NOV2625/Isotope/install-sh
+install_sh = ${SHELL} /Users/jon/Development/NOV2625/nntp2sql/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -336,27 +375,21 @@ target_alias =
 top_build_prefix = 
 top_builddir = .
 top_srcdir = .
-nntp2sql_SOURCES = main.c \
-	src/logging.c src/logging.h \
-	src/nntp.c src/nntp.h \
-	src/db.c src/db.h
+SUBDIRS = .
+nntp2sql_SOURCES = main.c src/export_html.c
+nntp2sql_LDADD = -L/opt/homebrew/Cellar/openssl@3/3.6.0/lib -lssl -lcrypto -lsqlite3 -L/opt/homebrew/Cellar/mysql/9.5.0_2/lib -lmysqlclient 
+nntp2sql_CFLAGS = -I/opt/homebrew/Cellar/openssl@3/3.6.0/include  -I/opt/homebrew/Cellar/mysql/9.5.0_2/include/mysql
 
-
-# Compiler/linker flags from configure
-AM_CFLAGS = -I/opt/homebrew/Cellar/openssl@3/3.6.0/include  
-AM_LDFLAGS = -L/opt/homebrew/Cellar/openssl@3/3.6.0/lib -lssl -lcrypto -lsqlite3  \
-	$(am__append_1)
-#viewer_SOURCES = gui/viewer.c
-#viewer_CPPFLAGS = 
-#viewer_LDADD =  -lsqlite3
-
-# Man page installation
+# Ensure headers in src/ are found
+AM_CPPFLAGS = -Isrc
+isotope_viewer_SOURCES = gui/viewer.c
+isotope_viewer_LDADD = -lsqlite3 -L/opt/homebrew/Cellar/gtk4/4.20.3/lib -lgtk-4 -L/opt/homebrew/Cellar/pango/1.57.0_1/lib -lpangocairo-1.0 -lpango-1.0 -L/opt/homebrew/Cellar/harfbuzz/12.2.0_1/lib -lharfbuzz -L/opt/homebrew/lib -lgdk_pixbuf-2.0 -L/opt/homebrew/Cellar/cairo/1.18.4/lib -lcairo-gobject -lcairo -L/opt/homebrew/Cellar/graphene/1.10.8/lib -lgraphene-1.0 -L/opt/homebrew/Cellar/glib/2.86.2/lib -lgio-2.0 -lgobject-2.0 -lglib-2.0 -L/opt/homebrew/opt/gettext/lib -lintl -L/opt/homebrew/Cellar/mysql/9.5.0_2/lib -lmysqlclient 
+isotope_viewer_CFLAGS =  -I/opt/homebrew/Cellar/gtk4/4.20.3/include/gtk-4.0 -I/opt/homebrew/Cellar/pango/1.57.0_1/include/pango-1.0 -I/opt/homebrew/Cellar/fribidi/1.0.16/include/fribidi -I/opt/homebrew/Cellar/harfbuzz/12.2.0_1/include/harfbuzz -I/opt/homebrew/Cellar/graphite2/1.3.14/include -I/opt/homebrew/include/gdk-pixbuf-2.0 -I/opt/homebrew/opt/libtiff/include -I/opt/homebrew/opt/zstd/include -I/opt/homebrew/Cellar/xz/5.8.1/include -I/opt/homebrew/opt/jpeg-turbo/include -I/opt/homebrew/Cellar/cairo/1.18.4/include/cairo -I/opt/homebrew/Cellar/fontconfig/2.17.1/include -I/opt/homebrew/opt/freetype/include/freetype2 -I/opt/homebrew/opt/libpng/include/libpng16 -I/opt/homebrew/Cellar/libxext/1.3.6/include -I/opt/homebrew/Cellar/xorgproto/2024.1/include -I/opt/homebrew/Cellar/libxrender/0.9.12/include -I/opt/homebrew/Cellar/libx11/1.8.12/include -I/opt/homebrew/Cellar/libxcb/1.17.0/include -I/opt/homebrew/Cellar/libxau/1.0.12/include -I/opt/homebrew/Cellar/libxdmcp/1.1.5/include -I/opt/homebrew/Cellar/pixman/0.46.4/include/pixman-1 -I/opt/homebrew/Cellar/graphene/1.10.8/include/graphene-1.0 -I/opt/homebrew/Cellar/graphene/1.10.8/lib/graphene-1.0/include -I/opt/homebrew/Cellar/glib/2.86.2/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/ffi -I/opt/homebrew/Cellar/glib/2.86.2/include/glib-2.0 -I/opt/homebrew/Cellar/glib/2.86.2/lib/glib-2.0/include -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/Cellar/pcre2/10.47/include -I/opt/homebrew/Cellar/mysql/9.5.0_2/include/mysql
+man_MANS = man/nntp2sql.1
 dist_man_MANS = man/nntp2sql.1
-
-# Extra distribution files
-EXTRA_DIST = README README.md configure.ac src/logging.h src/nntp.h src/db.h gui/viewer.c
+EXTRA_DIST = README README.md configure.ac man/nntp2sql.1 src/export_html.c src/db.h gui/viewer.c
 all: config.h
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -450,32 +483,30 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-$(am__rm_f) $(bin_PROGRAMS)
-src/$(am__dirstamp):
-	@$(MKDIR_P) src
-	@: >>src/$(am__dirstamp)
-src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/$(DEPDIR)
-	@: >>src/$(DEPDIR)/$(am__dirstamp)
-src/logging.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
-src/nntp.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/db.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-
-nntp2sql$(EXEEXT): $(nntp2sql_OBJECTS) $(nntp2sql_DEPENDENCIES) $(EXTRA_nntp2sql_DEPENDENCIES) 
-	@rm -f nntp2sql$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(nntp2sql_OBJECTS) $(nntp2sql_LDADD) $(LIBS)
 gui/$(am__dirstamp):
 	@$(MKDIR_P) gui
 	@: >>gui/$(am__dirstamp)
 gui/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) gui/$(DEPDIR)
 	@: >>gui/$(DEPDIR)/$(am__dirstamp)
-gui/viewer-viewer.$(OBJEXT): gui/$(am__dirstamp) \
+gui/isotope_viewer-viewer.$(OBJEXT): gui/$(am__dirstamp) \
 	gui/$(DEPDIR)/$(am__dirstamp)
 
-viewer$(EXEEXT): $(viewer_OBJECTS) $(viewer_DEPENDENCIES) $(EXTRA_viewer_DEPENDENCIES) 
-	@rm -f viewer$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(viewer_OBJECTS) $(viewer_LDADD) $(LIBS)
+isotope-viewer$(EXEEXT): $(isotope_viewer_OBJECTS) $(isotope_viewer_DEPENDENCIES) $(EXTRA_isotope_viewer_DEPENDENCIES) 
+	@rm -f isotope-viewer$(EXEEXT)
+	$(AM_V_CCLD)$(isotope_viewer_LINK) $(isotope_viewer_OBJECTS) $(isotope_viewer_LDADD) $(LIBS)
+src/$(am__dirstamp):
+	@$(MKDIR_P) src
+	@: >>src/$(am__dirstamp)
+src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/$(DEPDIR)
+	@: >>src/$(DEPDIR)/$(am__dirstamp)
+src/nntp2sql-export_html.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+
+nntp2sql$(EXEEXT): $(nntp2sql_OBJECTS) $(nntp2sql_DEPENDENCIES) $(EXTRA_nntp2sql_DEPENDENCIES) 
+	@rm -f nntp2sql$(EXEEXT)
+	$(AM_V_CCLD)$(nntp2sql_LINK) $(nntp2sql_OBJECTS) $(nntp2sql_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -485,11 +516,9 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/main.Po # am--include-marker
-include gui/$(DEPDIR)/viewer-viewer.Po # am--include-marker
-include src/$(DEPDIR)/db.Po # am--include-marker
-include src/$(DEPDIR)/logging.Po # am--include-marker
-include src/$(DEPDIR)/nntp.Po # am--include-marker
+include ./$(DEPDIR)/nntp2sql-main.Po # am--include-marker
+include gui/$(DEPDIR)/isotope_viewer-viewer.Po # am--include-marker
+include src/$(DEPDIR)/nntp2sql-export_html.Po # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -513,23 +542,51 @@ am--depfiles: $(am__depfiles_remade)
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-gui/viewer-viewer.o: gui/viewer.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
-	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
-#	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.o' libtool=no \
+gui/isotope_viewer-viewer.o: gui/viewer.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -MT gui/isotope_viewer-viewer.o -MD -MP -MF gui/$(DEPDIR)/isotope_viewer-viewer.Tpo -c -o gui/isotope_viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/isotope_viewer-viewer.Tpo gui/$(DEPDIR)/isotope_viewer-viewer.Po
+#	$(AM_V_CC)source='gui/viewer.c' object='gui/isotope_viewer-viewer.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -c -o gui/isotope_viewer-viewer.o `test -f 'gui/viewer.c' || echo '$(srcdir)/'`gui/viewer.c
 
-gui/viewer-viewer.obj: gui/viewer.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gui/viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/viewer-viewer.Tpo -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
-	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/viewer-viewer.Tpo gui/$(DEPDIR)/viewer-viewer.Po
-#	$(AM_V_CC)source='gui/viewer.c' object='gui/viewer-viewer.obj' libtool=no \
+gui/isotope_viewer-viewer.obj: gui/viewer.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -MT gui/isotope_viewer-viewer.obj -MD -MP -MF gui/$(DEPDIR)/isotope_viewer-viewer.Tpo -c -o gui/isotope_viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
+	$(AM_V_at)$(am__mv) gui/$(DEPDIR)/isotope_viewer-viewer.Tpo gui/$(DEPDIR)/isotope_viewer-viewer.Po
+#	$(AM_V_CC)source='gui/viewer.c' object='gui/isotope_viewer-viewer.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(viewer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gui/viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
-install-man1: $(dist_man_MANS)
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isotope_viewer_CFLAGS) $(CFLAGS) -c -o gui/isotope_viewer-viewer.obj `if test -f 'gui/viewer.c'; then $(CYGPATH_W) 'gui/viewer.c'; else $(CYGPATH_W) '$(srcdir)/gui/viewer.c'; fi`
+
+nntp2sql-main.o: main.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT nntp2sql-main.o -MD -MP -MF $(DEPDIR)/nntp2sql-main.Tpo -c -o nntp2sql-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/nntp2sql-main.Tpo $(DEPDIR)/nntp2sql-main.Po
+#	$(AM_V_CC)source='main.c' object='nntp2sql-main.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o nntp2sql-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+
+nntp2sql-main.obj: main.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT nntp2sql-main.obj -MD -MP -MF $(DEPDIR)/nntp2sql-main.Tpo -c -o nntp2sql-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/nntp2sql-main.Tpo $(DEPDIR)/nntp2sql-main.Po
+#	$(AM_V_CC)source='main.c' object='nntp2sql-main.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o nntp2sql-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+
+src/nntp2sql-export_html.o: src/export_html.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT src/nntp2sql-export_html.o -MD -MP -MF src/$(DEPDIR)/nntp2sql-export_html.Tpo -c -o src/nntp2sql-export_html.o `test -f 'src/export_html.c' || echo '$(srcdir)/'`src/export_html.c
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/nntp2sql-export_html.Tpo src/$(DEPDIR)/nntp2sql-export_html.Po
+#	$(AM_V_CC)source='src/export_html.c' object='src/nntp2sql-export_html.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o src/nntp2sql-export_html.o `test -f 'src/export_html.c' || echo '$(srcdir)/'`src/export_html.c
+
+src/nntp2sql-export_html.obj: src/export_html.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -MT src/nntp2sql-export_html.obj -MD -MP -MF src/$(DEPDIR)/nntp2sql-export_html.Tpo -c -o src/nntp2sql-export_html.obj `if test -f 'src/export_html.c'; then $(CYGPATH_W) 'src/export_html.c'; else $(CYGPATH_W) '$(srcdir)/src/export_html.c'; fi`
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/nntp2sql-export_html.Tpo src/$(DEPDIR)/nntp2sql-export_html.Po
+#	$(AM_V_CC)source='src/export_html.c' object='src/nntp2sql-export_html.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nntp2sql_CFLAGS) $(CFLAGS) -c -o src/nntp2sql-export_html.obj `if test -f 'src/export_html.c'; then $(CYGPATH_W) 'src/export_html.c'; else $(CYGPATH_W) '$(srcdir)/src/export_html.c'; fi`
+install-man1: $(dist_man_MANS) $(man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \
-	list2='$(dist_man_MANS)'; \
+	list2='$(dist_man_MANS) $(man_MANS)'; \
 	test -n "$(man1dir)" \
 	  && test -n "`echo $$list1$$list2`" \
 	  || exit 0; \
@@ -564,20 +621,67 @@ uninstall-man1:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man1dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(dist_man_MANS) $(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.1[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man1dir)'; $(am__uninstall_files_from_dir)
 
+# This directory's subdirectories are mostly independent; you can cd
+# into them and run 'make' without going through this Makefile.
+# To change the values of 'make' variables: instead of editing Makefiles,
+# (1) if the variable is set in 'config.status', edit 'config.status'
+#     (which will cause the Makefiles to be regenerated when you run 'make');
+# (2) otherwise, pass the desired values on the 'make' command line.
+$(am__recursive_targets):
+	@fail=; \
+	if $(am__make_keepgoing); then \
+	  failcom='fail=yes'; \
+	else \
+	  failcom='exit 1'; \
+	fi; \
+	dot_seen=no; \
+	target=`echo $@ | sed s/-recursive//`; \
+	case "$@" in \
+	  distclean-* | maintainer-clean-*) list='$(DIST_SUBDIRS)' ;; \
+	  *) list='$(SUBDIRS)' ;; \
+	esac; \
+	for subdir in $$list; do \
+	  echo "Making $$target in $$subdir"; \
+	  if test "$$subdir" = "."; then \
+	    dot_seen=yes; \
+	    local_target="$$target-am"; \
+	  else \
+	    local_target="$$target"; \
+	  fi; \
+	  ($(am__cd) $$subdir && $(MAKE) $(AM_MAKEFLAGS) $$local_target) \
+	  || eval $$failcom; \
+	done; \
+	if test "$$dot_seen" = "no"; then \
+	  $(MAKE) $(AM_MAKEFLAGS) "$$target-am" || exit 1; \
+	fi; test -z "$$fail"
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
-tags: tags-am
+tags: tags-recursive
 TAGS: tags
 
 tags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
 	set x; \
 	here=`pwd`; \
+	if ($(ETAGS) --etags-include --version) >/dev/null 2>&1; then \
+	  include_option=--etags-include; \
+	  empty_fix=.; \
+	else \
+	  include_option=--include; \
+	  empty_fix=; \
+	fi; \
+	list='$(SUBDIRS)'; for subdir in $$list; do \
+	  if test "$$subdir" = .; then :; else \
+	    test ! -f $$subdir/TAGS || \
+	      set "$$@" "$$include_option=$$here/$$subdir/TAGS"; \
+	  fi; \
+	done; \
 	$(am__define_uniq_tagged_files); \
 	shift; \
 	if test -z "$(ETAGS_ARGS)$$*$$unique"; then :; else \
@@ -590,7 +694,7 @@ tags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
 	      $$unique; \
 	  fi; \
 	fi
-ctags: ctags-am
+ctags: ctags-recursive
 
 CTAGS: ctags
 ctags-am: $(TAGS_DEPENDENCIES) $(am__tagged_files)
@@ -609,7 +713,7 @@ cscope: cscope.files
 clean-cscope:
 	-rm -f cscope.files
 cscope.files: clean-cscope cscopelist
-cscopelist: cscopelist-am
+cscopelist: cscopelist-recursive
 
 cscopelist-am: $(am__tagged_files)
 	list='$(am__tagged_files)'; \
@@ -662,6 +766,31 @@ distdir-am: $(DISTFILES)
 	    test -f "$(distdir)/$$file" \
 	    || cp -p $$d/$$file "$(distdir)/$$file" \
 	    || exit 1; \
+	  fi; \
+	done
+	@list='$(DIST_SUBDIRS)'; for subdir in $$list; do \
+	  if test "$$subdir" = .; then :; else \
+	    $(am__make_dryrun) \
+	      || test -d "$(distdir)/$$subdir" \
+	      || $(MKDIR_P) "$(distdir)/$$subdir" \
+	      || exit 1; \
+	    dir1=$$subdir; dir2="$(distdir)/$$subdir"; \
+	    $(am__relativize); \
+	    new_distdir=$$reldir; \
+	    dir1=$$subdir; dir2="$(top_distdir)"; \
+	    $(am__relativize); \
+	    new_top_distdir=$$reldir; \
+	    echo " (cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) top_distdir="$$new_top_distdir" distdir="$$new_distdir" \\"; \
+	    echo "     am__remove_distdir=: am__skip_length_check=: am__skip_mode_fix=: distdir)"; \
+	    ($(am__cd) $$subdir && \
+	      $(MAKE) $(AM_MAKEFLAGS) \
+	        top_distdir="$$new_top_distdir" \
+	        distdir="$$new_distdir" \
+		am__remove_distdir=: \
+		am__skip_length_check=: \
+		am__skip_mode_fix=: \
+	        distdir) \
+	      || exit 1; \
 	  fi; \
 	done
 	-test -n "$(am__skip_mode_fix)" \
@@ -808,21 +937,22 @@ distcleancheck: distclean
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
 check-am: all-am
-check: check-am
+check: check-recursive
 all-am: Makefile $(PROGRAMS) $(MANS) config.h
-installdirs:
+installdirs: installdirs-recursive
+installdirs-am:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
-install-exec: install-exec-am
-install-data: install-data-am
-uninstall: uninstall-am
+install: install-recursive
+install-exec: install-exec-recursive
+install-data: install-data-recursive
+uninstall: uninstall-recursive
 
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 
-installcheck: installcheck-am
+installcheck: installcheck-recursive
 install-strip:
 	if test -z '$(STRIP)'; then \
 	  $(MAKE) $(AM_MAKEFLAGS) INSTALL_PROGRAM="$(INSTALL_STRIP_PROGRAM)" \
@@ -848,81 +978,77 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-clean: clean-am
+clean: clean-recursive
 
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
-distclean: distclean-am
+distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -f ./$(DEPDIR)/main.Po
-	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
-	-rm -f src/$(DEPDIR)/db.Po
-	-rm -f src/$(DEPDIR)/logging.Po
-	-rm -f src/$(DEPDIR)/nntp.Po
+	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
+	-rm -f gui/$(DEPDIR)/isotope_viewer-viewer.Po
+	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
 
-dvi: dvi-am
+dvi: dvi-recursive
 
 dvi-am:
 
-html: html-am
+html: html-recursive
 
 html-am:
 
-info: info-am
+info: info-recursive
 
 info-am:
 
 install-data-am: install-man
 
-install-dvi: install-dvi-am
+install-dvi: install-dvi-recursive
 
 install-dvi-am:
 
 install-exec-am: install-binPROGRAMS
 
-install-html: install-html-am
+install-html: install-html-recursive
 
 install-html-am:
 
-install-info: install-info-am
+install-info: install-info-recursive
 
 install-info-am:
 
 install-man: install-man1
 
-install-pdf: install-pdf-am
+install-pdf: install-pdf-recursive
 
 install-pdf-am:
 
-install-ps: install-ps-am
+install-ps: install-ps-recursive
 
 install-ps-am:
 
 installcheck-am:
 
-maintainer-clean: maintainer-clean-am
+maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -f ./$(DEPDIR)/main.Po
-	-rm -f gui/$(DEPDIR)/viewer-viewer.Po
-	-rm -f src/$(DEPDIR)/db.Po
-	-rm -f src/$(DEPDIR)/logging.Po
-	-rm -f src/$(DEPDIR)/nntp.Po
+	-rm -f ./$(DEPDIR)/nntp2sql-main.Po
+	-rm -f gui/$(DEPDIR)/isotope_viewer-viewer.Po
+	-rm -f src/$(DEPDIR)/nntp2sql-export_html.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
-mostlyclean: mostlyclean-am
+mostlyclean: mostlyclean-recursive
 
 mostlyclean-am: mostlyclean-compile mostlyclean-generic
 
-pdf: pdf-am
+pdf: pdf-recursive
 
 pdf-am:
 
-ps: ps-am
+ps: ps-recursive
 
 ps-am:
 
@@ -930,11 +1056,12 @@ uninstall-am: uninstall-binPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: all install-am install-strip
+.MAKE: $(am__recursive_targets) all install-am install-strip
 
-.PHONY: CTAGS GTAGS TAGS all all-am am--depfiles am--refresh check \
-	check-am clean clean-binPROGRAMS clean-cscope clean-generic \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
+.PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
+	am--depfiles am--refresh check check-am clean \
+	clean-binPROGRAMS clean-cscope clean-generic cscope \
+	cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
 	dist-bzip3 dist-gzip dist-lzip dist-shar dist-tarZ dist-xz \
 	dist-zip dist-zstd distcheck distclean distclean-compile \
 	distclean-generic distclean-hdr distclean-tags distcleancheck \
@@ -944,11 +1071,11 @@ uninstall-man: uninstall-man1
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-man install-man1 install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-man \
-	uninstall-man1
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-man uninstall-man1
 
 .PRECIOUS: Makefile
 
